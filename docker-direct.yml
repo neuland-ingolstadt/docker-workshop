@@ -1,0 +1,9 @@
+version '3':
+
+services:
+  hello-world:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./website:/usr/share/nginx/html

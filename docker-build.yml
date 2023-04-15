@@ -1,0 +1,7 @@
+version: '3'
+
+services:
+  hello-world:
+    build: ./website
+    ports:
+      - "80:80"
