@@ -1,0 +1,82 @@
+version: '3'
+
+services:
+
+  traefik:
+    image: traefik:v2.5
+    restart: always
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.http.address=:80"
+      - "--entrypoints.https.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@example.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--log.level=INFO"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./traefik/letsencrypt:/letsencrypt
+    networks:
+      - traefik-public
+
+  wordpress:
+    image: wordpress
+    restart: always
+    depends_on:
+      - mariadb
+    environment:
+      WORDPRESS_DB_HOST: mariadb:3306
+      WORDPRESS_DB_USER: user
+      WORDPRESS_DB_PASSWORD: password
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - ./wordpress-data:/var/www/html
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.wordpress.rule=Host(`example.com`)
+      - traefik.http.routers.wordpress.entrypoints=http,https
+      - traefik.http.routers.wordpress.middlewares=https-redirect@docker
+      - traefik.http.routers.wordpress.tls=true
+      - traefik.http.routers.wordpress.tls.certresolver=letsencrypt
+    networks:
+      - internal
+      - traefik-public
+
+  mariadb:
+    image: mariadb
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: drowssap
+      MARIADB_USER: user
+      MARIADB_DATABASE: wordpress
+      MARIADB_PASSWORD: password
+    volumes:
+      - ./mariadb:/var/lib/mysql
+    networks:
+      - internal
+
+  mysql:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: drowssap
+      MARIADB_USER: user
+      MARIADB_DATABASE: wordpress
+      MARIADB_PASSWORD: password
+    volumes:
+      - ./mysql:/var/lib/mysql
+    networks:
+      - internal
+
+networks:
+
+  internal:
+    internal: true
+    external: false
+
+  traefik-public:
+    external: true
+    internal: false
